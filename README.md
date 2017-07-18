@@ -1,4 +1,4 @@
-# Holo-Editor-Revised
+# Holo Editor Revised
 A complete remake of my Holo Editor in E2.
 
 Create, edit and save holograms from a EGPv3. 
