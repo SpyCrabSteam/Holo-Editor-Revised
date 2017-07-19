@@ -7,9 +7,12 @@ Create, edit and save holograms from a EGPv3.
   * Create, Edit and delete multiple holograms;
   * Copy and Paste holograms;
   * Change hologram position, scale, model, color, material;
+  * 16 color presets;
+  * Wire keyboard support for value input;
   * Save to file and load from file;
   * Save to code;
   * Autosaving;
+  * Customize the menus;
   
 ## WIP:
   * Share your hologram creations with everyone!
