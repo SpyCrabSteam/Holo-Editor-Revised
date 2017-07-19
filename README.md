@@ -13,3 +13,9 @@ Create, edit and save holograms from a EGPv3.
   
 ## WIP:
   * Share your hologram creations with everyone!
+
+## Upload your saves!
+ Run the HoloEditorRevisedPublishSave.exe in the folder, Press Browse and select your save and hit upload!
+
+### Using
+ To use the E2, just drop the folder into ..\steamapps\common\GarrysMod\garrysmod\data\expression2
