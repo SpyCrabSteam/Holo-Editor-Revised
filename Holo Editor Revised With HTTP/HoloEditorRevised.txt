@@ -7,7 +7,8 @@
 @trigger User Keyboard
 runOnFile(1)
 runOnLast(1)
-#include "HoloEditorRevisedLibrary"
+runOnHTTP(1)
+#include "Holo Editor Revised With HTTP/lib/HoloEditorRevisedRendering"
 
 function number touchButton(Index){
     local Cursor = E:egpCursor(User)
@@ -56,6 +57,14 @@ function number isKeyboardConnected(String:string){
     else{
         return 0
         }
+    }
+
+function table holoData(Values:table){
+    local Return = table(table(),table(),table(),table(),table(),table(),table())
+    for(I=3,9){
+        Return[I-2,table] = Values[I,table]
+        }
+    return Return
     }
 
 function void updateHolo(Values:table){
@@ -114,7 +123,7 @@ if(first()){
     #InfoScroll - CurScroll,MinScroll,MaxScroll
     #Values - 1:HoloSelected,2:MaxHolos,3:CreatedHolos,4:Pos,5:Color,6:Angles,7:Scale,8:Models,9:Material,10:IsHighlighted,11:SelectedHolos,12:KeyboardInput,13:FieldSelected, 
     #14:InfoScroll, 15:Model List, 16:Preset Color List, 17:Material Preset Num, 18:Preview Box Color, 19:Preview Box Material, 20: Preview Text Color, 21: Preview Text Alpha
-    #23: Save Folder, 24: Display Save Folder, 25:Save Folder Num, 26: Autosave On, 27:Autosave Interval
+    #23: Save Folder, 24: Display Save Folder, 25:Save Folder Num, 26: Autosave On, 27: Autosave Interval, 28: HTTP Data, 29: Divider, 30: HTTP Page
     
     Values = table(0,HOLOMAX,table(),table(),table(),table(),table(),table(),table(),0,table(),0,0,array(185,185,430),
     table("Cone","Cube","Cylinder","Hexagon","Icosphere","Icosphere2","Icosphere3","Octagon","Plane","Prism","Pyramid","Right Prism","Sphere","Sphere2","Sphere3","Tetra",
@@ -124,7 +133,7 @@ if(first()){
     table(vec(255),vec(192),vec(128),vec(),vec(255,0,0),vec(128,0,0),vec(255,255,0),vec(128,128,0),vec(0,255,0),
     vec(0,128,0),vec(0,255,255),vec(0,128,128),vec(0,0,255),vec(0,0,128),vec(255,0,255),vec(128,0,128)),
     table(),vec(50),"",vec(255),255,"",
-    table("",">e2shared/",">cpushared/",">gpushared/"),table("E2 Files","E2 Shared","CPU Shared","GPU Shared"),1,0,10)
+    table("",">e2shared/",">cpushared/",">gpushared/"),table("E2 Files","E2 Shared","CPU Shared","GPU Shared"),1,0,10,table(),"-!-!?!-43782007654e6874*%#$N%",1)
     
     HoloModels = table(
     "cone","cube","cylinder","hexagon","icosphere","icosphere2","icosphere3","octagon","plane","prism","pyramid","right_prism","sphere","sphere2","sphere3","tetra",
@@ -151,7 +160,7 @@ if(first()){
     CopiedHolos = table(table(),table(),table(),table(),table(),table(),table())
     
     printColor(vec(200,150,0),"Welcome to Holo Editor Revised!")
-    E:loadMenu(MenuSelect,SelectMenuSelect,TxtColor,BoxColor,BoxMaterial,Values,User)
+    
     #MenuSelect = 0
     SelectMenuSelect = ""
     
@@ -160,6 +169,8 @@ if(first()){
         E:keyboardConnected()
         timer("remove",3000)
         }
+        
+    E:loadMenu(MenuSelect,SelectMenuSelect,TxtColor,BoxColor,BoxMaterial,Values,User)
     }
 
 if(inputClk()&inputClkName()=="Keyboard"&!UseTouchscreen){
@@ -241,7 +252,7 @@ if(inputClk()&inputClkName()=="Keyboard"&!UseTouchscreen){
                 Values[12,string] = Values[12,string]:sub(0,Values[12,string]:length()-1)
                 }
             elseif(Keyboard==10&Values[12,string]!=""){
-                local ValuesEncoded = vonEncode(Values)
+                local ValuesEncoded = vonEncode(holoData(Values))
                 fileWrite(Values[23,table][Values[25,number],string]+Values[12,string]+".txt",ValuesEncoded)
                 hint("Holos saved!",1.5)
                 Values[12,string] = ""
@@ -487,7 +498,7 @@ if(User&~User){
                 SelectMenuSelect = ""
                 }
             elseif(touchButton(288)){
-                if(fileCanLoad()){
+                if(fileCanLoad()){ #Load Autosave
                     fileLoad("autosave.txt")
                     
                     hint("Holos loaded!",1.5)
@@ -496,6 +507,14 @@ if(User&~User){
                 else{
                     printColor(vec(255,0,0),"Unable to load file due to cooldown (Default: 10 seconds).")
                     }
+                }
+            elseif(touchButton(289)){
+                MenuSelect = 27 #Public saves
+                SelectMenuSelect = ""
+                
+                httpRequest("https://www.dropbox.com/s/eejyxt5x80mry3i/test.txt?dl=1")
+                
+                
                 }
             }
         elseif(SelectMenuSelect=="Settings"){
@@ -514,6 +533,32 @@ if(User&~User){
             elseif(touchButton(289)){
                 MenuSelect = 26 #Saving
                 SelectMenuSelect = ""
+                }
+            elseif(touchButton(290)){
+                BoxColor = vec(50)
+                TxtColor = vec(255)
+                BoxMaterial = ""
+                TxtAlpha = 255
+                Values[25,number] = 1
+                Values[26,number] = 0
+                Values[27,number] = 10
+                
+                hint("Settings reset",1.5)
+                }
+            elseif(touchButton(291)){
+                for(I=1,Values[3,table]:findLastIndex()){
+                    if(Values[3,table]){
+                        holoDelete(I)
+                        Values[3,table][I,number] = 0
+                        Values[4,table][I,vector] = vec()
+                        Values[6,table][I,angle] = ang()
+                        Values[7,table][I,vector] = vec()
+                        Values[8,table][I,string] = ""
+                        Values[5,table][I,vector4] = vec4()
+                        Values[9,table][I,string] = ""
+                        }
+                    }
+                hint("Holos reset",1.5)
                 }
             }
         }
@@ -1105,6 +1150,64 @@ if(User&~User){
                     timer("autosave",Values[27,number]*1000)
                     }
                 }
+            elseif(MenuSelect==27){
+                if(touchButtonInrange(7,12)){
+                    local CurrentData = array()
+                
+                    if(touchButton(7)){
+                        CurrentData = Values[28,table][1+(6*(Values[30,number]-1)),array]
+                        }
+                    elseif(touchButton(8)){
+                        CurrentData = Values[28,table][2+(6*(Values[30,number]-1)),array]
+                        }
+                    elseif(touchButton(9)){
+                        CurrentData = Values[28,table][3+(6*(Values[30,number]-1)),array]
+                        }
+                    elseif(touchButton(10)){
+                        CurrentData = Values[28,table][4+(6*(Values[30,number]-1)),array]
+                        }
+                    elseif(touchButton(11)){
+                        CurrentData = Values[28,table][5+(6*(Values[30,number]-1)),array]
+                        }
+                    elseif(touchButton(12)){
+                        CurrentData = Values[28,table][6+(6*(Values[30,number]-1)),array]
+                        }
+                    hint("Loading "+CurrentData[1,string],1.5)
+                    
+                    Data = vonDecodeTable(CurrentData[2,string])
+    
+                    Values[1,number] = 0
+                    for(I=3,9){
+                        Values[I,table] = Data[I-2,table]
+                        }
+                        
+                    for(I=1,Values[3,table]:findLastIndex()){
+                        if(Values[3,table][I,number]){
+                            local Pos = Values[4,table][I,vector]
+                            local Color = Values[5,table][I,vector4] 
+                            local Angle = Values[6,table][I,angle] 
+                            local Scale = Values[7,table][I,vector]
+                            local Model = Values[8,table][I,string]
+                            local Material = Values[9,table][I,string]
+                            
+                            holoCreate(I,Pos,Scale,Angle,vec(Color),Model)
+                            holoAlpha(I,Color:w())
+                            holoMaterial(I,Material)
+                            Values[1,number] = I
+                            
+                            updateHolo(Values)
+                            }
+                        }
+                    
+                    hint("Holos loaded!",1.5)
+                    }
+                elseif(touchButton(20)&Values[30,number]>1){
+                    Values[30,number] = Values[30,number]-1
+                    }
+                elseif(touchButton(22)&Values[30,number]<Values[28,table]:count()/6){
+                    Values[30,number] = Values[30,number]+1
+                    }
+                }
         }
     E:loadMenu(MenuSelect,SelectMenuSelect,TxtColor,BoxColor,BoxMaterial,Values,User)
     }
@@ -1121,9 +1224,7 @@ if(clk("highlight")){
         holoColor(HighlightID,vec(0,0,255))
         }
     elseif(Highlight==4){
-        holoColor(HighlightID,Values[8,table][Values[1,number],vector4])
-        }
-    elseif(Highlight==5){
+        holoColor(HighlightID,Values[5,table][Values[1,number],vector4])
         Highlight = 0
         }
     timer("highlight",1000)
@@ -1140,7 +1241,7 @@ if(clk("updateInfoScroll")){
 
 if(clk("autosave")){
     if(Values[26,number]){
-        local ValuesEncoded = vonEncode(Values)
+        local ValuesEncoded = vonEncode(holoData(Values))
         fileWrite("autosave.txt",ValuesEncoded)
         hint("Holos autosaved!",1.5)
         timer("autosave",Values[27,number]*1000)
@@ -1153,7 +1254,7 @@ if(fileClk()){
     
     Values[1,number] = 0
     for(I=3,9){
-        Values[I,table] = Data[I,table]
+        Values[I,table] = Data[I-2,table]
         }
         
     for(I=1,Values[3,table]:findLastIndex()){
@@ -1178,10 +1279,34 @@ if(fileClk()){
     Values[12,string] = ""
     }
 
-if(last()&Values[3,table]:count()!=0){
-    local ValuesEncoded = vonEncode(Values)
+if(last()&Values[3,table]:max()!=0){
+    local ValuesEncoded = vonEncode(holoData(Values))
     fileWrite("autosave.txt",ValuesEncoded)
     hint("Holos autosaved!",1.5)
+    }
+
+if(httpClk()){
+    HTTPData = httpData()
+    
+    local HoloSaves = HTTPData:explode(Values[29,string])
+    HoloSaves:shift()
+    
+    local TempTable = table()
+    
+    for(I=1,HoloSaves:count()){
+        local Save = HoloSaves[I,string]
+        
+        local TempArray = Save:explode("\\n")
+        
+        local Name = TempArray[1,string]:trim()
+        local HoloSaveData = TempArray[2,string]:trim()
+        
+        TempTable:pushArray(array(Name,HoloSaveData))
+        }
+        
+    Values[28,table] = TempTable
+    
+    E:loadMenu(MenuSelect,SelectMenuSelect,TxtColor,BoxColor,BoxMaterial,Values,User)
     }
 
 EPos = entity():pos()

@@ -586,10 +586,14 @@ if(first()){
         This:drawBox(287,vec2(396,128),vec2(196,48),BoxColor,BoxMaterial)
         This:drawBox(288,vec2(396,192),vec2(196,48),BoxColor,BoxMaterial)
         This:drawBox(289,vec2(396,256),vec2(196,48),BoxColor,BoxMaterial)
+        This:drawBox(290,vec2(396,320),vec2(196,48),BoxColor,BoxMaterial)
+        This:drawBox(291,vec2(396,384),vec2(196,48),BoxColor,BoxMaterial)
         
-        This:writeText(293,"Buttons",vec2(396,128),1,1,48,TxtColor)
-        This:writeText(294,"Text",vec2(396,192),1,1,48,TxtColor)
-        This:writeText(295,"Saving",vec2(396,256),1,1,48,TxtColor)
+        This:writeText(292,"Buttons",vec2(396,128),1,1,48,TxtColor)
+        This:writeText(293,"Text",vec2(396,192),1,1,48,TxtColor)
+        This:writeText(294,"Saving",vec2(396,256),1,1,48,TxtColor)
+        This:writeText(295,"Reset Settings",vec2(396,320),1,1,32,TxtColor)
+        This:writeText(296,"Reset Holos",vec2(396,384),1,1,36,TxtColor)
         }
     
     function void wirelink:buttonCustomize(Num,TxtColor:vector,BoxColor:vector,BoxMaterial:string,Values:table){
@@ -762,6 +766,53 @@ if(first()){
             This:egpColor(14,vec(255,0,0))
             }
         }
+        
+    function void wirelink:publicSaves(TxtColor:vector,BoxColor:vector,BoxMaterial:string,Values:table){
+        This:egpClear()
+        
+        This:egpRoundedBox(1,vec2(48,48),vec2(96,96))
+        This:drawBox(2,vec2(48,26),vec2(64,13),vec(),"")
+        This:drawBox(3,vec2(48,52),vec2(64,13),vec(),"")
+        This:drawBox(4,vec2(48,78),vec2(64,13),vec(),"")
+        
+        This:writeText(5,"Public Saves",vec2(270,64),1,1,64,TxtColor)
+        
+        This:egpLine(6,vec2(0,128),vec2(512,128))
+        This:egpSize(6,5)
+        This:egpColor(6,vec(155))
+        
+        local SaveCount = Values[28,table]:count()
+        
+        if(!SaveCount){
+            This:writeText(100,"LOADING...",vec2(256,256),1,1,64,vec(0,255,0))
+            }
+        else{
+            for(I=1,6){
+                if(Values[28,table][I+((Values[30,number]-1)*6),array][1,string]!=""){
+                    This:drawBox(6+I,vec2(128+(256*(abs((I%2)-1))),190+(92*(ceil(I/2)-1))),vec2(192,64),BoxColor,BoxMaterial)
+                    This:writeText(6+I+SaveCount,Values[28,table][I+((Values[30,number]-1)*6),array][1,string],vec2(128+(256*(abs((I%2)-1))),190+(92*(ceil(I/2)-1))),1,1,32,TxtColor)
+                    }
+                }
+            }
+        
+        if(Values[30,number]==1){
+            This:drawBox(20,vec2(62,470),vec2(92,48),vec(75),BoxMaterial)
+            This:writeText(21,"Previous",vec2(62,470),1,1,20,vec(100))
+            }
+        else{
+            This:drawBox(20,vec2(62,470),vec2(92,48),BoxColor,BoxMaterial)
+            This:writeText(21,"Previous",vec2(62,470),1,1,20,TxtColor)
+            }
+            
+        if(SaveCount<=6|Values[30,number]==ceil(SaveCount/6)){
+            This:drawBox(22,vec2(450,470),vec2(92,48),vec(75),BoxMaterial)
+            This:writeText(23,"Next",vec2(450,470),1,1,32,vec(100))
+            }
+        else{
+            This:drawBox(22,vec2(450,470),vec2(92,48),BoxColor,BoxMaterial)
+            This:writeText(23,"Next",vec2(450,470),1,1,32,TxtColor)
+            }
+        }
     
     function void wirelink:loadMenu(Num,Select:string,TxtColor:vector,BoxColor:vector,BoxMaterial:string,Values:table,User:entity){
         if(Num==1){
@@ -823,6 +874,9 @@ if(first()){
             }
         elseif(Num==26){
             This:saveSettings(TxtColor,BoxColor,BoxMaterial,Values)
+            }
+        elseif(Num==27){
+            This:publicSaves(TxtColor,BoxColor,BoxMaterial,Values)
             }
         }
         

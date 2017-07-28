@@ -1,0 +1,1224 @@
+@name HoloEditorRevised
+@inputs Keyboard E:wirelink User:entity
+@persist WHITE:vector HOLOMAX BASEPOS:vector
+@persist MenuSelect SelectMenuSelect:string TxtColor:vector BoxColor:vector BoxMaterial:string Values:table PrevMenuSelect HoloModels:table
+@persist Highlight HighlightID CopiedHolos:table I1 EPos:vector TempString:string TableIndex UseTouchscreen HoloMaterialPreset:table
+@persist TempEnt:entity
+@trigger User Keyboard
+runOnFile(1)
+runOnLast(1)
+#include "Holo Editor Revised Without HTTP/lib/HoloEditorRevisedRendering"
+
+function number touchButton(Index){
+    local Cursor = E:egpCursor(User)
+    local Pos = E:egpPos(Index)
+    local Size = E:egpSize(Index)
+        
+    local Corner1 = Pos-Size/2
+    local Corner2 = Pos+Size/2
+    
+    if(inrange(Cursor,Corner1,Corner2)){
+        return 1
+        }
+    else{
+        return 0
+        }
+    }
+
+function number touchButtonInrange(Min,Max){
+    Int = 0
+    while(Int<=Max-Min&perf()){
+        local Cursor = E:egpCursor(User)
+        local Pos = E:egpPos(Int+Min)
+        local Size = E:egpSize(Int+Min)
+            
+        local Corner1 = Pos-Size/2
+        local Corner2 = Pos+Size/2
+        
+        if(inrange(Cursor,Corner1,Corner2)){
+            return Int+Min
+            break
+            }
+        if(Int+Min==Max){
+            return 0
+            break
+            }
+        Int++
+        }
+    }
+
+function number isKeyboardConnected(String:string){
+    KeyboardName = "gmod_wire_keyboard"
+        
+    if(ioInputEntity(String):type()==KeyboardName){
+        return 1
+        }
+    else{
+        return 0
+        }
+    }
+
+function table holoData(Values:table){
+    local Return = table(table(),table(),table(),table(),table(),table(),table())
+    for(I=3,9){
+        Return[I-2,table] = Values[I,table]
+        }
+    return Return
+    }
+
+function void updateHolo(Values:table){
+    Holo = Values[1,number]
+    
+    holoPos(Holo,EPos+Values[4,table][Holo,vector])
+    holoColor(Holo,vec(Values[5,table][Holo,vector4]))
+    holoAlpha(Holo,Values[5,table][Holo,vector4]:w())     
+    holoAng(Holo,Values[6,table][Holo,angle])
+    holoScale(Holo,Values[7,table][Holo,vector])
+    holoModel(Holo,Values[8,table][Holo,string])  
+    holoMaterial(Holo,Values[9,table][Holo,string])             
+    }
+
+function array wirelink:updateInfoScrollBar(Num,TempEnt:entity,Options:array){
+    if(TempEnt:keyUse()&TempEnt:aimEntity()==E:entity()){
+        CurLookY = E:egpCursor(TempEnt):y() #Positive number is up, negative is down
+        if(CurLookY>Options[1,number]&Options[1,number]<=Options[3,number]){
+            Options[1,number]=Options[1,number]+(log10(Options[3,number]-Options[1,number])*((CurLookY-Options[1,number])/5))
+            E:egpPos(Num,vec2(E:egpPos(Num):x(),Options[1,number]))
+            timer("updateInfoScroll",50)
+            E:loadMenu(MenuSelect,SelectMenuSelect,TxtColor,BoxColor,BoxMaterial,Values,User)
+            return Options
+            }
+        elseif(CurLookY<Options[1,number]&Options[1,number]>Options[2,number]){
+            Options[1,number]=Options[1,number]-(log10(Options[1,number]-Options[2,number])*((Options[1,number]-CurLookY)/5))
+            E:egpPos(Num,vec2(E:egpPos(Num):x(),Options[1,number]))
+            timer("updateInfoScroll",50)
+            E:loadMenu(MenuSelect,SelectMenuSelect,TxtColor,BoxColor,BoxMaterial,Values,User)
+            return Options
+            }
+        }
+    else{
+        stoptimer("updateInfoScroll")
+        }
+    }
+
+function number table:findLastIndex(){
+    This:pushNumber(100)
+    return This:maxIndex()-1
+    }
+
+if(first()){
+    E:egpClear()
+    
+    #Seting the constants
+    
+    WHITE = vec(255)   
+    HOLOMAX = holoMaxAmount()  
+    BASEPOS = EPos+vec(0,0,50)
+    
+    #Seting the globals
+    
+    #Did someone say tables? I think someone said tables.
+    
+    #InfoScroll - CurScroll,MinScroll,MaxScroll
+    #Values - 1:HoloSelected,2:MaxHolos,3:CreatedHolos,4:Pos,5:Color,6:Angles,7:Scale,8:Models,9:Material,10:IsHighlighted,11:SelectedHolos,12:KeyboardInput,13:FieldSelected, 
+    #14:InfoScroll, 15:Model List, 16:Preset Color List, 17:Material Preset Num, 18:Preview Box Color, 19:Preview Box Material, 20: Preview Text Color, 21: Preview Text Alpha
+    #23: Save Folder, 24: Display Save Folder, 25:Save Folder Num, 26: Autosave On, 27:Autosave Interval
+    
+    Values = table(0,HOLOMAX,table(),table(),table(),table(),table(),table(),table(),0,table(),0,0,array(185,185,430),
+    table("Cone","Cube","Cylinder","Hexagon","Icosphere","Icosphere2","Icosphere3","Octagon","Plane","Prism","Pyramid","Right Prism","Sphere","Sphere2","Sphere3","Tetra",
+    "Torus","Torus2","Torus3","HQ Cone","HQ Cubinder","HQ Cylinder","HQ Dome","HQ HDome","HQ HDome Thick","HQ HDome Thin","HQ Icosphere","HQ RCube","HQ RCube Thick","HQ RCube Thin",
+    "HQ RCylinder","HQ RCylinder Thick","HQ RCylinder Thin","HQ Sphere","HQ STube","HQ STube Thick","HQ STube Thin","HQ Torus","HQ Torus Thick","HQ Torus Thin","HQ Tube",
+    "HQ Tube Thick","HQ Tube Thin"),
+    table(vec(255),vec(192),vec(128),vec(),vec(255,0,0),vec(128,0,0),vec(255,255,0),vec(128,128,0),vec(0,255,0),
+    vec(0,128,0),vec(0,255,255),vec(0,128,128),vec(0,0,255),vec(0,0,128),vec(255,0,255),vec(128,0,128)),
+    table(),vec(50),"",vec(255),255,"",
+    table("",">e2shared/",">cpushared/",">gpushared/"),table("E2 Files","E2 Shared","CPU Shared","GPU Shared"),1,0,10)
+    
+    HoloModels = table(
+    "cone","cube","cylinder","hexagon","icosphere","icosphere2","icosphere3","octagon","plane","prism","pyramid","right_prism","sphere","sphere2","sphere3","tetra",
+    "torus","torus2","torus3","hq_cone","hq_cubinder","hq_cylinder","hq_dome","hq_hdome","hq_hdome_thick","hq_hdome_thin","hq_icosphere","hq_rcube","hq_rcube_thick","hq_rcube_thin",
+    "hq_rcylinder","hq_rcylinder_thick","hq_rcylinder_thin","hq_sphere","hq_stube","hq_stube_thick","hq_stube_thin","hq_torus","hq_torus_thick","hq_torus_thin","hq_tube",
+    "hq_tube_thick","hq_tube_thin")
+    "phoenix_storms/Metalfloor_2-3"
+    
+    HoloMaterialPreset = table("","models/props_c17/metalladder001","models/props_canal/metalwall005b","models/props_combine/metal_combinebridge001",
+    "models/props_interiors/metalfence007a","models/props_pipes/pipeset_metal02","models/props_pipes/pipeset_metal","models/props_lab/warp_sheet",
+    "models/props_combine/combine_interface_disp","models/props_debris/concretewall019a","phoenix_storms/FuturisticTrackRamp_1-2","phoenix_storms/MetalSet_1-2",
+    "phoenix_storms/stripes","phoenix_storms/bluemetal","phoenix_storms/cube","phoenix_storms/dome","phoenix_storms/fender_wood","phoenix_storms/iron_rails",
+    "hunter/myplastic","models/props_combine/stasisshield_sheet")
+    
+    MenuSelect = 1
+    #SelectMenuSelect = "Color"
+    #UseTouchscreen = 1
+    TxtColor = WHITE
+    TxtAlpha = 255
+    BoxMaterial = ""
+    BoxColor = vec(50)
+    SelectedHolos = table()
+    #CopiedHolos - HoloID, Pos, Color, Angles, Scale, Models, Material
+    CopiedHolos = table(table(),table(),table(),table(),table(),table(),table())
+    
+    printColor(vec(200,150,0),"Welcome to Holo Editor Revised!")
+    
+    #MenuSelect = 0
+    SelectMenuSelect = ""
+    
+    if(isKeyboardConnected("Keyboard")){
+        KeyboardConnected = 1
+        E:keyboardConnected()
+        timer("remove",3000)
+        }
+        
+    E:loadMenu(MenuSelect,SelectMenuSelect,TxtColor,BoxColor,BoxMaterial,Values,User)
+    }
+
+if(inputClk()&inputClkName()=="Keyboard"&!UseTouchscreen){
+    if(Values[13,number]){
+        if(inrange(MenuSelect,3,15)){
+            if(Keyboard==127&Values[12,string]!=""){
+                Values[12,string] = Values[12,string]:sub(0,Values[12,string]:length()-1)
+                }
+            elseif(Keyboard==10&Values[12,string]!=""){
+                if(MenuSelect==3||MenuSelect==13){
+                    local Vec = Values[TableIndex,table][Values[1,number],vector]
+                    Values[TableIndex,table][Values[1,number],vector] = Vec:setX(Values[12,string]:toNumber())
+                    }
+                elseif(MenuSelect==6){
+                    local Color = Values[TableIndex,table][Values[1,number],vector4]
+                    Values[TableIndex,table][Values[1,number],vector4] = Color:setX(Values[12,string]:toNumber())
+                    }
+                elseif(MenuSelect==10){
+                    local Ang = Values[TableIndex,table][Values[1,number],angle]
+                    Values[TableIndex,table][Values[1,number],angle] = Ang:setPitch(Values[12,string]:toNumber())
+                    }
+                elseif(MenuSelect==4||MenuSelect==14){
+                    local Vec = Values[TableIndex,table][Values[1,number],vector]
+                    Values[TableIndex,table][Values[1,number],vector] = Vec:setZ(Values[12,string]:toNumber())
+                    }
+                elseif(MenuSelect==7){
+                    local Color = Values[TableIndex,table][Values[1,number],vector4]
+                    Values[TableIndex,table][Values[1,number],vector4] = Color:setY(Values[12,string]:toNumber())
+                    }
+                elseif(MenuSelect==11){
+                    local Ang = Values[TableIndex,table][Values[1,number],angle]
+                    Values[TableIndex,table][Values[1,number],angle] = Ang:setYaw(Values[12,string]:toNumber())
+                    }
+                elseif(MenuSelect==5||MenuSelect==15){
+                    local Vec = Values[TableIndex,table][Values[1,number],vector]
+                    Values[TableIndex,table][Values[1,number],vector] = Vec:setY(Values[12,string]:toNumber())
+                    }
+                elseif(MenuSelect==8){
+                    local Color = Values[TableIndex,table][Values[1,number],vector4]
+                    Values[TableIndex,table][Values[1,number],vector4] = Color:setZ(Values[12,string]:toNumber())
+                    }
+                elseif(MenuSelect==12){
+                    local Ang = Values[TableIndex,table][Values[1,number],angle]
+                    Values[TableIndex,table][Values[1,number],angle] = Ang:setRoll(Values[12,string]:toNumber())
+                    }
+                elseif(MenuSelect==9){
+                    Values[TableIndex,table][Values[1,number],vector4] = vec4(vec(Values[TableIndex,table][Values[1,number],vector4]),Values[12,string]:toNumber())
+                    }
+                Values[12,string] = ""
+                updateHolo(Values)
+                Values[13,number] = 0
+                }
+            elseif(Keyboard!=8&(inrange(Keyboard,48,57)|Keyboard==46|Keyboard==45)){
+                #KeyboardInput = KeyboardInput:sub(0,KeyboardInput:length()-1)
+                Values[12,string]=Values[12,string]+toChar(Keyboard)
+                #KeyboardInput+="_"
+                }
+            }
+        elseif(MenuSelect==20){
+            if(Keyboard==127&Values[12,string]!=""){
+                Values[12,string] = Values[12,string]:sub(0,Values[12,string]:length()-1)
+                }
+            elseif(Keyboard==10&Values[12,string]!=""){
+                Values[9,table][Values[1,number],string] = Values[12,string]
+                
+                Values[12,string] = ""
+                updateHolo(Values)
+                Values[13,number] = 0
+                Values[17,table][Values[1,number],number] = 21
+                }
+            elseif(Keyboard!=8&Keyboard<127){
+                #KeyboardInput = KeyboardInput:sub(0,KeyboardInput:length()-1)
+                Values[12,string]=Values[12,string]+toChar(Keyboard)
+                #KeyboardInput+="_"
+                }
+            }
+        elseif(MenuSelect==21){
+            if(Keyboard==127&Values[12,string]!=""){
+                Values[12,string] = Values[12,string]:sub(0,Values[12,string]:length()-1)
+                }
+            elseif(Keyboard==10&Values[12,string]!=""){
+                local ValuesEncoded = vonEncode(holoData(Values))
+                fileWrite(Values[23,table][Values[25,number],string]+Values[12,string]+".txt",ValuesEncoded)
+                hint("Holos saved!",1.5)
+                Values[12,string] = ""
+                }
+            elseif(Keyboard!=8&Keyboard<127){
+                #KeyboardInput = KeyboardInput:sub(0,KeyboardInput:length()-1)
+                Values[12,string]=Values[12,string]+toChar(Keyboard)
+                #KeyboardInput+="_"
+                }
+            }
+        elseif(MenuSelect==22){
+            if(Keyboard==127&Values[12,string]!=""){
+                Values[12,string] = Values[12,string]:sub(0,Values[12,string]:length()-1)
+                }
+            elseif(Keyboard==10&Values[12,string]!=""){
+                local ValuesToString = "table("
+                
+                for(I=1,Values[3,table]:findLastIndex()){
+                    local ID = Values[3,table][I,number]
+                    if(ID){
+                        local Pos = Values[4,table][I,vector]
+                        local Color = Values[5,table][I,vector4] 
+                        local Angle = Values[6,table][I,angle] 
+                        local Scale = Values[7,table][I,vector]
+                        local Model = Values[8,table][I,string]
+                        local Material = Values[9,table][I,string]
+                        
+                        #ID,Pos,Color,Angle,Scale,Model,Material
+                        ValuesToString+="table("+I+","+"vec("+Pos:x()+","+Pos:y()+","+Pos:z()+"),vec4("+Color:x()+","+Color:y()+","+Color:z()+","+Color:w()+
+                        "),ang("+Angle:pitch()+","+Angle:yaw()+","+Angle:roll()+"),vec("+Scale:x()+","+Scale:y()+","+Scale:z()+"),"+
+                        toChar(34)+Model+toChar(34)+","+toChar(34)+Material+toChar(34)+"),                     
+"
+                        }
+                    }
+                ValuesToString = ValuesToString:sub(1,ValuesToString:length()-2)
+                ValuesToString+=")"
+                
+                fileWrite(Values[23,table][Values[25,number],string]+Values[12,string]+".txt","@name "+Values[12,string]+"
+
+Values = "+ValuesToString+"
+
+EPos = entity():pos()
+
+for(I=1,"+toString(Values[3,table]:findLastIndex())+"){
+    local ID = Values[I,table][1,number]
+    if(ID){
+        local Pos = Values[I,table][2,vector]
+        local Color = Values[I,table][3,vector4]
+        local Angle = Values[I,table][4,angle]
+        local Scale = Values[I,table][5,vector]
+        local Model = Values[I,table][6,string]
+        local Material = Values[I,table][7,string]
+        
+        holoCreate(ID,EPos+Pos,Scale,Angle,vec(Color),Model)
+        holoAlpha(ID,Color:w())
+        holoMaterial(ID,Material)
+        holoParent(ID,entity())
+        }
+    }
+                ")
+                hint("Holos saved to code!",1.5)
+                Values[12,string] = ""
+                }
+            elseif(Keyboard!=8&Keyboard<127){
+                #KeyboardInput = KeyboardInput:sub(0,KeyboardInput:length()-1)
+                Values[12,string]=Values[12,string]+toChar(Keyboard)
+                #KeyboardInput+="_"
+                }
+            }
+        elseif(MenuSelect==23){
+            if(Keyboard==127&Values[12,string]!=""){
+                Values[12,string] = Values[12,string]:sub(0,Values[12,string]:length()-1)
+                }
+            elseif(Keyboard==10&Values[12,string]!=""){
+                if(fileCanLoad()){
+                    fileLoad(Values[23,table][Values[25,number],string]+Values[12,string]+".txt")
+                    
+                    hint("Holos loaded!",1.5)
+                    Values[12,string] = ""
+                    }
+                else{
+                    printColor(vec(255,0,0),"Unable to load file due to cooldown (Default: 10 seconds).")
+                    }
+                }
+            elseif(Keyboard!=8&Keyboard<127){
+                #KeyboardInput = KeyboardInput:sub(0,KeyboardInput:length()-1)
+                Values[12,string]=Values[12,string]+toChar(Keyboard)
+                #KeyboardInput+="_"
+                }
+            }
+        E:loadMenu(MenuSelect,SelectMenuSelect,TxtColor,BoxColor,BoxMaterial,Values,User)
+        }
+    }
+
+if(User&~User){
+    if(MenuSelect==1){
+        if(touchButton(272)){
+            if(SelectMenuSelect == "Position"){
+                SelectMenuSelect = ""
+                }
+            else{
+                SelectMenuSelect = "Position"
+                }
+            }
+        elseif(touchButton(273)){
+            if(SelectMenuSelect == "Scale"){
+                SelectMenuSelect = ""
+                }
+            else{
+                SelectMenuSelect = "Scale"
+                }
+            }
+        elseif(touchButton(274)){
+            if(SelectMenuSelect == "Color"){
+                SelectMenuSelect = ""
+                }
+            else{
+                SelectMenuSelect = "Color"
+                }
+            }
+        elseif(touchButton(276)){
+            if(SelectMenuSelect == "Save"){
+                SelectMenuSelect = ""
+                }
+            else{
+                SelectMenuSelect = "Save"
+                }
+            }
+        elseif(touchButton(277)){
+            if(SelectMenuSelect == "Load"){
+                SelectMenuSelect = ""
+                }
+            else{
+                SelectMenuSelect = "Load"
+                }
+            }
+        elseif(touchButton(255)){
+            if(SelectMenuSelect == "Settings"){
+                SelectMenuSelect = ""
+                }
+            else{
+                SelectMenuSelect = "Settings"
+                }
+            }
+        elseif(touchButton(271)){
+            MenuSelect = 2
+            SelectMenuSelect = ""
+            }
+        elseif(touchButton(275)){
+            MenuSelect = 16
+            SelectMenuSelect = ""
+            }
+        if(touchButton(1)){
+            MenuSelect = PrevMenuSelect
+            }
+        if(SelectMenuSelect=="Position"){
+            if(touchButton(287)){
+                MenuSelect = 3 #X
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(288)){
+                MenuSelect = 4 #Y
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(289)){
+                MenuSelect = 5 #Z
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(290)){
+                MenuSelect = 10 #P
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(291)){
+                MenuSelect = 11 #Y
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(292)){
+                MenuSelect = 12 #R
+                SelectMenuSelect = ""
+                }
+            }
+        elseif(SelectMenuSelect=="Scale"){
+            if(touchButton(287)){
+                MenuSelect = 13 #X
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(288)){
+                MenuSelect = 14 #Y
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(289)){
+                MenuSelect = 15 #Z
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(290)){
+                MenuSelect = 17 #LQ Models
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(291)){
+                MenuSelect = 18 #HQ Models
+                SelectMenuSelect = ""
+                }
+            }
+        elseif(SelectMenuSelect=="Color"){
+            if(touchButton(287)){
+                MenuSelect = 6 #R
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(288)){
+                MenuSelect = 7 #G
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(289)){
+                MenuSelect = 8 #B
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(291)){
+                MenuSelect = 9 #A
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(290)){
+                MenuSelect = 19 #Presets
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(292)){
+                MenuSelect = 20 #Materials
+                SelectMenuSelect = ""
+                }
+            }
+        elseif(SelectMenuSelect=="Save"){
+            if(touchButton(288)){
+                MenuSelect = 21 #To File
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(289)){
+                MenuSelect = 22 #To Code
+                SelectMenuSelect = ""
+                }
+            }
+        elseif(SelectMenuSelect=="Load"){
+            if(touchButton(287)){
+                MenuSelect = 23 #From File
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(288)){
+                if(fileCanLoad()){ #Load Autosave
+                    fileLoad("autosave.txt")
+                    
+                    hint("Holos loaded!",1.5)
+                    Values[12,string] = ""
+                    }
+                else{
+                    printColor(vec(255,0,0),"Unable to load file due to cooldown (Default: 10 seconds).")
+                    }
+                }
+            }
+        elseif(SelectMenuSelect=="Settings"){
+            if(touchButton(287)){
+                MenuSelect = 24 #Button
+                SelectMenuSelect = ""
+                Values[18,vector] = BoxColor
+                Values[19,string] = BoxMaterial
+                }
+            elseif(touchButton(288)){
+                MenuSelect = 25 #Text
+                SelectMenuSelect = ""
+                Values[20,vector] = TxtColor
+                Values[21,number] = TxtAlpha
+                }
+            elseif(touchButton(289)){
+                MenuSelect = 26 #Saving
+                SelectMenuSelect = ""
+                }
+            elseif(touchButton(290)){
+                BoxColor = vec(50)
+                TxtColor = vec(255)
+                BoxMaterial = ""
+                TxtAlpha = 255
+                Values[25,number] = 1
+                Values[26,number] = 0
+                Values[27,number] = 10
+                
+                hint("Settings reset",1.5)
+                }
+            elseif(touchButton(291)){
+                for(I=1,Values[3,table]:findLastIndex()){
+                    if(Values[3,table]){
+                        holoDelete(I)
+                        Values[3,table][I,number] = 0
+                        Values[4,table][I,vector] = vec()
+                        Values[6,table][I,angle] = ang()
+                        Values[7,table][I,vector] = vec()
+                        Values[8,table][I,string] = ""
+                        Values[5,table][I,vector4] = vec4()
+                        Values[9,table][I,string] = ""
+                        }
+                    }
+                hint("Holos reset",1.5)
+                }
+            }
+        }
+    else{
+        if(touchButton(1)){
+            PrevMenuSelect = MenuSelect
+            MenuSelect = 1
+            }
+        if(MenuSelect==2){
+            if(touchButton(7)&Values[1,number]!=250){
+                Values[1,number] = Values[1,number]+1
+                }
+            
+            elseif(Values[1,number]!=0){
+                if(touchButton(8)){
+                    Values[1,number] = Values[1,number]-1
+                    }
+                elseif(touchButton(9)&!Values[3,table][Values[1,number],number]){
+                    ID = Values[1,number]
+                    holoCreate(Values[1,number],BASEPOS)
+                    holoParent(Values[1,number],entity())
+                    Values[3,table][Values[1,number],number] = 1
+                    Values[4,table][Values[1,number],vector] = vec(0,0,50)
+                    Values[6,table][Values[1,number],angle] = ang()
+                    Values[7,table][Values[1,number],vector] = vec(1)
+                    Values[8,table][Values[1,number],string] = "cube"
+                    Values[5,table][Values[1,number],vector4] = vec4(255)
+                    Values[9,table][Values[1,number],string] = ""
+                    updateHolo(Values)
+                    }
+                elseif(touchButton(10)){
+                    holoDelete(Values[1,number])
+                    Values[3,table][Values[1,number],number] = 0
+                    Values[4,table][Values[1,number],vector] = vec()
+                    Values[6,table][Values[1,number],angle] = ang()
+                    Values[7,table][Values[1,number],vector] = vec()
+                    Values[8,table][Values[1,number],string] = ""
+                    Values[5,table][Values[1,number],vector4] = vec4()
+                    Values[9,table][Values[1,number],string] = ""
+                    }
+                elseif(touchButton(11)){
+                    if(Values[10,number]){
+                        Values[10,number] = 0
+                        holoColor(HighlightID,Values[8,table][Values[1,number],vector4])
+                        Highlight = 0
+                        HighlightID = 0
+                        stoptimer("highlight")
+                        }
+                    else{
+                        HighlightID = Values[1,number]
+                        Values[10,number] = 1
+                        timer("highlight",1000)
+                        }
+                    }
+                elseif(touchButton(12)){
+                    if(Values[11,table][Values[1,number],number]){
+                        Values[11,table][Values[1,number],number] = 0
+                        }
+                    else{
+                        Values[11,table][Values[1,number],number] = 1
+                        }
+                    }
+                elseif(touchButton(13)){
+                    for(I=1,HOLOMAX){
+                        if(Values[11,table][I,number]){
+                            CopiedHolos[1,table][I,number] = 1
+                            CopiedHolos[2,table][I,vector] = Values[4,table][I,vector]
+                            CopiedHolos[3,table][I,vector4] = Values[5,table][I,vector4]
+                            CopiedHolos[4,table][I,angle] = Values[6,table][I,angle]
+                            CopiedHolos[5,table][I,vector] = Values[7,table][I,vector]
+                            CopiedHolos[6,table][I,string] = Values[8,table][I,string]
+                            CopiedHolos[7,table][I,string] = Values[9,table][I,string]
+                            }
+                        }
+                    }
+                elseif(touchButton(14)){
+                    for(I=1,CopiedHolos[1,table]:findLastIndex()){
+                        if(CopiedHolos[1,table][I,number]){
+                            for(I1=1,HOLOMAX){
+                                if(!Values[3,table][I1,number]){
+                                    local Pos = CopiedHolos[2,table][I,vector]
+                                    local Color = CopiedHolos[3,table][I,vector4] 
+                                    local Angle = CopiedHolos[4,table][I,angle] 
+                                    local Scale = CopiedHolos[5,table][I,vector]
+                                    local Model = CopiedHolos[6,table][I,string]
+                                    local Material = CopiedHolos[7,table][I,string]
+                                    
+                                    Values[3,table][I1,number] = 1
+                                    Values[4,table][I1,vector] = Pos
+                                    Values[5,table][I1,vector4] = Color
+                                    Values[6,table][I1,angle] = Angle
+                                    Values[7,table][I1,vector] = Scale
+                                    Values[8,table][I1,string] = Model
+                                    Values[9,table][I1,string] = Material
+                                    
+                                    holoCreate(I1,Pos,Scale,Angle,vec(Color),Model)
+                                    holoAlpha(I1,Color:w())
+                                    holoMaterial(I1,Material)
+                                    holoParent(I1,entity())
+                                    
+                                    Values[1,number] = I1
+                                    updateHolo(Values)
+                                    
+                                    break
+                                    }
+                                }
+                            }
+                        }
+                        hint("Holos pasted!",1.5)
+                    }
+                elseif(touchButton(15)){
+                    for(I=1,HOLOMAX){
+                        if(Values[11,table][I,number]){
+                            TempString+=I:toString()+"; "
+                            }
+                        }
+                    printColor(vec(0,255,0),"Currently selected holos: "+TempString)
+                    TempString = ""
+                    }
+                }
+            }
+        elseif(inrange(MenuSelect,3,15)){
+            if(MenuSelect==13){
+                TableIndex = 7
+                }
+            else{
+                TableIndex = floor((MenuSelect-2)/4)+4
+                }
+            if(touchButton(6)){
+                if(MenuSelect==3||MenuSelect==13){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0.25,0,0)
+                    }
+                elseif(MenuSelect==6&Values[TableIndex,table][Values[1,number],vector4]:x()<255){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0.25,0,0,0)
+                    }
+                elseif(MenuSelect==10){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0.25,0,0)
+                    }
+                elseif(MenuSelect==4||MenuSelect==14){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0,0,0.25)
+                    }
+                elseif(MenuSelect==7&Values[TableIndex,table][Values[1,number],vector4]:y()<255){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0.25,0,0)
+                    }
+                elseif(MenuSelect==11){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0,0.25,0)
+                    }
+                elseif(MenuSelect==5||MenuSelect==15){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0,0.25,0)
+                    }
+                elseif(MenuSelect==8&Values[TableIndex,table][Values[1,number],vector4]:z()<255){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0,0.25,0)
+                    }
+                elseif(MenuSelect==12){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0,0,0.25)
+                    }
+                elseif(MenuSelect==9&Values[TableIndex,table][Values[1,number],vector4]:w()<255){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0,0,0.25)
+                    }
+                }
+            elseif(touchButton(7)){
+                if(MenuSelect==3||MenuSelect==13){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0.5,0,0)
+                    }
+                elseif(MenuSelect==6&Values[TableIndex,table][Values[1,number],vector4]:x()<=254.5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0.5,0,0,0)
+                    }
+                elseif(MenuSelect==10){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0.5,0,0)
+                    }
+                elseif(MenuSelect==4||MenuSelect==14){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0,0,0.5)
+                    }
+                elseif(MenuSelect==7&Values[TableIndex,table][Values[1,number],vector4]:y()<=254.5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0.5,0,0)
+                    }
+                elseif(MenuSelect==11){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0,0.5,0)
+                    }
+                elseif(MenuSelect==5||MenuSelect==15){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0,0.5,0)
+                    }
+                elseif(MenuSelect==8&Values[TableIndex,table][Values[1,number],vector4]:z()<=254.5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0,0.5,0)
+                    }
+                elseif(MenuSelect==12){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0,0,0.5)
+                    }
+                elseif(MenuSelect==9&Values[TableIndex,table][Values[1,number],vector4]:w()<=254.5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0,0,0.5)
+                    }
+                }
+            elseif(touchButton(8)){
+                if(MenuSelect==3||MenuSelect==13){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(1,0,0)
+                    }
+                elseif(MenuSelect==6&Values[TableIndex,table][Values[1,number],vector4]:x()<=254){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(1,0,0,0)
+                    }
+                elseif(MenuSelect==10){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(1,0,0)
+                    }
+                elseif(MenuSelect==4||MenuSelect==14){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0,0,1)
+                    }
+                elseif(MenuSelect==7&Values[TableIndex,table][Values[1,number],vector4]:y()<=254){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,1,0,0)
+                    }
+                elseif(MenuSelect==11){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0,1,0)
+                    }
+                elseif(MenuSelect==5||MenuSelect==15){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0,1,0)
+                    }
+                elseif(MenuSelect==8&Values[TableIndex,table][Values[1,number],vector4]:z()<=254){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0,1,0)
+                    }
+                elseif(MenuSelect==12){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0,0,1)
+                    }
+                elseif(MenuSelect==9&Values[TableIndex,table][Values[1,number],vector4]:w()<=254){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0,0,1)
+                    }
+                
+                }
+            elseif(touchButton(9)){
+                if(MenuSelect==3||MenuSelect==13){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(5,0,0)
+                    }
+                elseif(MenuSelect==6&Values[TableIndex,table][Values[1,number],vector4]:x()<=250){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(5,0,0,0)
+                    }
+                elseif(MenuSelect==10){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(5,0,0)
+                    }
+                elseif(MenuSelect==4||MenuSelect==14){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0,0,5)
+                    }
+                elseif(MenuSelect==7&Values[TableIndex,table][Values[1,number],vector4]:y()<=250){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,5,0,0)
+                    }
+                elseif(MenuSelect==11){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0,5,0)
+                    }
+                elseif(MenuSelect==5||MenuSelect==15){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]+vec(0,5,0)
+                    }
+                elseif(MenuSelect==8&Values[TableIndex,table][Values[1,number],vector4]:z()<=250){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0,5,0)
+                    }
+                elseif(MenuSelect==12){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]+ang(0,0,5)
+                    }
+                elseif(MenuSelect==9&Values[TableIndex,table][Values[1,number],vector4]:w()<=250){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]+vec4(0,0,0,5)
+                    }
+                }
+            if(touchButton(10)){
+                if(MenuSelect==3||MenuSelect==13){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0.25,0,0)
+                    }
+                elseif(MenuSelect==6&Values[TableIndex,table][Values[1,number],vector4]:x()>0){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0.25,0,0,0)
+                    }
+                elseif(MenuSelect==10){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0.25,0,0)
+                    }
+                elseif(MenuSelect==4||MenuSelect==14){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0,0,0.25)
+                    }
+                elseif(MenuSelect==7&Values[TableIndex,table][Values[1,number],vector4]:y()>0){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0.25,0,0)
+                    }
+                elseif(MenuSelect==11){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0,0.25,0)
+                    }
+                elseif(MenuSelect==5||MenuSelect==15){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0,0.25,0)
+                    }
+                elseif(MenuSelect==8&Values[TableIndex,table][Values[1,number],vector4]:z()>0){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0,0.25,0)
+                    }
+                elseif(MenuSelect==12){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0,0,0.25)
+                    }
+                elseif(MenuSelect==9&Values[TableIndex,table][Values[1,number],vector4]:w()>0){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0,0,0.25)
+                    }
+                }
+            elseif(touchButton(11)){
+                if(MenuSelect==3||MenuSelect==13){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0.5,0,0)
+                    }
+                elseif(MenuSelect==6&Values[TableIndex,table][Values[1,number],vector4]:x()>=0.5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0.5,0,0,0)
+                    }
+                elseif(MenuSelect==10){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0.5,0,0)
+                    }
+                elseif(MenuSelect==4||MenuSelect==14){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0,0,0.5)
+                    }
+                elseif(MenuSelect==7&Values[TableIndex,table][Values[1,number],vector4]:y()>=0.5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0.5,0,0)
+                    }
+                elseif(MenuSelect==11){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0,0.5,0)
+                    }
+                elseif(MenuSelect==5||MenuSelect==15){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0,0.5,0)
+                    }
+                elseif(MenuSelect==8&Values[TableIndex,table][Values[1,number],vector4]:z()>=0.5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0,0.5,0)
+                    }
+                elseif(MenuSelect==12){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0,0,0.5)
+                    }
+                elseif(MenuSelect==9&Values[TableIndex,table][Values[1,number],vector4]:w()>=0.5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0,0,0.5)
+                    }
+                }
+            elseif(touchButton(12)){
+                if(MenuSelect==3||MenuSelect==13){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(1,0,0)
+                    }
+                elseif(MenuSelect==6&Values[TableIndex,table][Values[1,number],vector4]:x()>=1){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(1,0,0,0)
+                    }
+                elseif(MenuSelect==10){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(1,0,0)
+                    }
+                elseif(MenuSelect==4||MenuSelect==14){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0,0,1)
+                    }
+                elseif(MenuSelect==7&Values[TableIndex,table][Values[1,number],vector4]:y()>=1){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,1,0,0)
+                    }
+                elseif(MenuSelect==11){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0,1,0)
+                    }
+                elseif(MenuSelect==5||MenuSelect==15){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0,1,0)
+                    }
+                elseif(MenuSelect==8&Values[TableIndex,table][Values[1,number],vector4]:z()>=1){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0,1,0)
+                    }
+                elseif(MenuSelect==12){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0,0,1)
+                    }
+                elseif(MenuSelect==9&Values[TableIndex,table][Values[1,number],vector4]:w()>=1){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0,0,1)
+                    }
+                }
+            elseif(touchButton(13)){
+                if(MenuSelect==3||MenuSelect==13){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(5,0,0)
+                    }
+                elseif(MenuSelect==6&Values[TableIndex,table][Values[1,number],vector4]:x()>=5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(5,0,0,0)
+                    }
+                elseif(MenuSelect==10){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(5,0,0)
+                    }
+                elseif(MenuSelect==4||MenuSelect==14){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0,0,5)
+                    }
+                elseif(MenuSelect==7&Values[TableIndex,table][Values[1,number],vector4]:y()>=5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,5,0,0)
+                    }
+                elseif(MenuSelect==11){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0,5,0)
+                    }
+                elseif(MenuSelect==5||MenuSelect==15){
+                    Values[TableIndex,table][Values[1,number],vector] = Values[TableIndex,table][Values[1,number],vector]-vec(0,5,0)
+                    }
+                elseif(MenuSelect==8&Values[TableIndex,table][Values[1,number],vector4]:z()>=5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0,5,0)
+                    }
+                elseif(MenuSelect==12){
+                    Values[TableIndex,table][Values[1,number],angle] = Values[TableIndex,table][Values[1,number],angle]-ang(0,0,5)
+                    }
+                elseif(MenuSelect==9&Values[TableIndex,table][Values[1,number],vector4]:w()>=5){
+                    Values[TableIndex,table][Values[1,number],vector4] = Values[TableIndex,table][Values[1,number],vector4]-vec4(0,0,0,5)
+                    }
+                }
+            elseif(touchButton(22)|Values[13,number]){
+                if(!UseTouchscreen){
+                    Values[13,number] = 1
+                    }
+                }
+            updateHolo(Values)
+            if(!touchButton(22)&Values[13,number]){
+                Values[13,number] = 0
+                }
+            }
+        elseif(MenuSelect==16){
+            if(touchButton(9)){
+                TempEnt = User
+                E:updateInfoScrollBar(9,TempEnt,Values[14,array])
+                }
+            }
+        elseif(MenuSelect==17){
+            PressedButton = touchButtonInrange(6,24)
+            if(PressedButton){
+                Values[8,table][Values[1,number],string] = HoloModels[PressedButton-5,string]
+                updateHolo(Values)
+                }
+            }
+        elseif(MenuSelect==18){
+            PressedButton = touchButtonInrange(6,30)
+            if(PressedButton){
+                Values[8,table][Values[1,number],string] = HoloModels[PressedButton+14,string]
+                updateHolo(Values)
+                }
+            }
+        elseif(MenuSelect==19){
+            PressedButton = touchButtonInrange(6,21)
+            if(PressedButton){
+                Values[5,table][Values[1,number],vector4] = vec4(Values[16,table][PressedButton-5,vector],Values[5,table][Values[1,number],vector4]:w())
+                updateHolo(Values)
+                }
+            }
+        elseif(MenuSelect==20){   
+            if(touchButton(7)&Values[17,table][Values[1,number],number]>1){
+                Values[17,table][Values[1,number],number] = Values[17,table][Values[1,number],number]-1
+                Values[9,table][Values[1,number],string] = HoloMaterialPreset[Values[17,table][Values[1,number],number],string]
+                updateHolo(Values)
+                }
+            elseif(touchButton(8)&Values[17,table][Values[1,number],number]<20){
+                Values[17,table][Values[1,number],number] = Values[17,table][Values[1,number],number]+1
+                Values[9,table][Values[1,number],string] = HoloMaterialPreset[Values[17,table][Values[1,number],number],string]
+                updateHolo(Values)
+                }
+            elseif((touchButton(13)&!UseTouchscreen)|Values[13,number]){
+                Values[13,number] = 1
+                }
+            elseif(touchButton(13)&UseTouchscreen){
+                MenuSelect = 21
+                SelectMenuSelect = ""
+                }
+            if(!touchButton(13)&Values[13,number]){
+                Values[13,number] = 0
+                }
+            }
+        elseif(MenuSelect==21|MenuSelect==22|MenuSelect==23){
+            if((touchButton(6)&!UseTouchscreen)|Values[13,number]){
+                Values[13,number] = 1
+                }
+            elseif(touchButton(6)&UseTouchscreen){
+                MenuSelect = 21
+                SelectMenuSelect = ""
+                }
+            if(!touchButton(6)&Values[13,number]){
+                Values[13,number] = 0
+                }
+            }
+        elseif(MenuSelect==24){
+            if(touchButton(13)&Values[18,vector]:x()<255){
+                #Red +
+                Values[18,vector] = Values[18,vector]:setX(Values[18,vector]:x()+5)
+                }
+            elseif(touchButton(14)&Values[18,vector]:x()>0){
+                #Red -
+                Values[18,vector] = Values[18,vector]:setX(Values[18,vector]:x()-5)
+                }
+            elseif(touchButton(19)&Values[18,vector]:y()<255){
+                #Green +
+                Values[18,vector] = Values[18,vector]:setY(Values[18,vector]:y()+5)
+                }
+            elseif(touchButton(20)&Values[18,vector]:y()>0){
+                #Green -
+                Values[18,vector] = Values[18,vector]:setY(Values[18,vector]:y()-5)
+                }
+            elseif(touchButton(25)&Values[18,vector]:z()<255){
+                #Blue +
+                Values[18,vector] = Values[18,vector]:setZ(Values[18,vector]:z()+5)
+                }
+            elseif(touchButton(26)&Values[18,vector]:z()>0){
+                #Blue -
+                Values[18,vector] = Values[18,vector]:setZ(Values[18,vector]:z()-5)
+                }
+            elseif(touchButton(32)&Values[19,string]!="vgui/gradient-l"){
+                #Material Next
+                
+                if(Values[19,string]==""){
+                    Values[19,string] = "vgui/gradient_down"
+                    }
+                elseif(Values[19,string]=="vgui/gradient_down"){
+                    Values[19,string] = "vgui/gradient_up"
+                    }
+                elseif(Values[19,string]=="vgui/gradient_up"){
+                    Values[19,string] = "vgui/gradient-r"
+                    }
+                elseif(Values[19,string]=="vgui/gradient-r"){
+                    Values[19,string] = "vgui/gradient-l"
+                    }
+                }
+            elseif(touchButton(31)&Values[19,string]!=""){
+                #Material Previous
+                
+                if(Values[19,string]=="vgui/gradient-l"){
+                    Values[19,string] = "vgui/gradient-r"
+                    }
+                elseif(Values[19,string]=="vgui/gradient-r"){
+                    Values[19,string] = "vgui/gradient_up"
+                    }
+                elseif(Values[19,string]=="vgui/gradient_up"){
+                    Values[19,string] = "vgui/gradient_down"
+                    }
+                elseif(Values[19,string]=="vgui/gradient_down"){
+                    Values[19,string] = ""
+                    }
+                }
+            elseif(touchButton(38)&(Values[19,string]!=BoxMaterial|Values[18,vector]!=BoxColor)){
+                BoxMaterial = Values[19,string]
+                BoxColor = Values[18,vector]
+                
+                hint("Buttons customized!",1.5)
+                }
+            }
+            elseif(MenuSelect==25){
+                if(touchButton(13)&Values[20,vector]:x()<255){
+                #Red +
+                    Values[20,vector] = Values[20,vector]:setX(Values[20,vector]:x()+5)
+                    }
+                elseif(touchButton(14)&Values[20,vector]:x()>0){
+                    #Red -
+                    Values[20,vector] = Values[20,vector]:setX(Values[20,vector]:x()-5)
+                    }
+                elseif(touchButton(19)&Values[20,vector]:y()<255){
+                    #Green +
+                    Values[20,vector] = Values[20,vector]:setY(Values[20,vector]:y()+5)
+                    }
+                elseif(touchButton(20)&Values[20,vector]:y()>0){
+                    #Green -
+                    Values[20,vector] = Values[20,vector]:setY(Values[20,vector]:y()-5)
+                    }
+                elseif(touchButton(25)&Values[20,vector]:z()<255){
+                    #Blue +
+                    Values[20,vector] = Values[20,vector]:setZ(Values[20,vector]:z()+5)
+                    }
+                elseif(touchButton(26)&Values[20,vector]:z()>0){
+                    #Blue -
+                    Values[20,vector] = Values[20,vector]:setZ(Values[20,vector]:z()-5)
+                    }
+                elseif(touchButton(31)&Values[20,vector]:z()<255){
+                    #Alpha +
+                    Values[21,number] = Values[21,number]+5
+                    }
+                elseif(touchButton(32)&Values[20,vector]:z()>0){
+                    #Alpha -
+                    Values[21,number] = Values[21,number]-5
+                    }
+                elseif(touchButton(38)&(Values[21,number]!=TxtAlpha|Values[20,vector]!=TxtColor)){
+                    TxtAlpha = Values[21,number]
+                    TxtColor = Values[20,vector]
+                    
+                    hint("Text customized!",1.5)
+                    }
+                }
+            elseif(MenuSelect==26){
+                if(touchButton(9)&Values[25,number]>1){
+                    Values[25,number] = Values[25,number]-1
+                    }
+                elseif(touchButton(10)&Values[25,number]<4){
+                    Values[25,number] = Values[25,number]+1
+                    }
+                elseif(touchButton(14)){
+                    Values[26,number] = abs(Values[26,number]-1)
+                    timer("autosave",Values[27,number]*1000)
+                    }
+                elseif(touchButton(15)&Values[26,number]){
+                    if(Values[27,number]==10){
+                        Values[27,number] = 15
+                        }
+                    elseif(inrange(Values[27,number],15,105)){
+                        Values[27,number] = 15*(Values[27,number]/15+1)
+                        }
+                    elseif(Values[27,number]==120){
+                        Values[27,number] = 180
+                        }
+                    elseif(Values[27,number]==180){
+                        Values[27,number] = 240
+                        }
+                    elseif(Values[27,number]==240){
+                        Values[27,number] = 10
+                        }
+                    stoptimer("autosave")
+                    timer("autosave",Values[27,number]*1000)
+                    }
+                }
+        }
+    E:loadMenu(MenuSelect,SelectMenuSelect,TxtColor,BoxColor,BoxMaterial,Values,User)
+    }
+
+if(clk("highlight")){
+    Highlight++
+    if(Highlight==1){
+        holoColor(HighlightID,vec(255,0,0))
+        }
+    elseif(Highlight==2){
+        holoColor(HighlightID,vec(0,255,0))
+        }
+    elseif(Highlight==3){
+        holoColor(HighlightID,vec(0,0,255))
+        }
+    elseif(Highlight==4){
+        holoColor(HighlightID,Values[8,table][Values[1,number],vector4])
+        }
+    elseif(Highlight==5){
+        Highlight = 0
+        }
+    timer("highlight",1000)
+    }
+
+if(clk("remove")){
+    E:removeMessageBox()
+    stoptimer("remove")
+    }
+
+if(clk("updateInfoScroll")){
+    E:updateInfoScrollBar(9,TempEnt,Values[14,array])
+    }
+
+if(clk("autosave")){
+    if(Values[26,number]){
+        local ValuesEncoded = vonEncode(holoData(Values))
+        fileWrite("autosave.txt",ValuesEncoded)
+        hint("Holos autosaved!",1.5)
+        timer("autosave",Values[27,number]*1000)
+        }
+    }
+
+if(fileClk()){
+    local File = fileRead()
+    Data = vonDecodeTable(File)
+    
+    Values[1,number] = 0
+    for(I=3,9){
+        Values[I,table] = Data[I-2,table]
+        }
+        
+    for(I=1,Values[3,table]:findLastIndex()){
+        if(Values[3,table][I,number]){
+            local Pos = Values[4,table][I,vector]
+            local Color = Values[5,table][I,vector4] 
+            local Angle = Values[6,table][I,angle] 
+            local Scale = Values[7,table][I,vector]
+            local Model = Values[8,table][I,string]
+            local Material = Values[9,table][I,string]
+            
+            holoCreate(I,Pos,Scale,Angle,vec(Color),Model)
+            holoAlpha(I,Color:w())
+            holoMaterial(I,Material)
+            Values[1,number] = I
+            
+            updateHolo(Values)
+            }
+        }
+    
+    hint("Holos loaded!",1.5)
+    Values[12,string] = ""
+    }
+
+if(last()&Values[3,table]:max()!=0){
+    local ValuesEncoded = vonEncode(holoData(Values))
+    fileWrite("autosave.txt",ValuesEncoded)
+    hint("Holos autosaved!",1.5)
+    }
+
+EPos = entity():pos()
+BasePos = EPos+vec(0,0,50)
