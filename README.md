@@ -13,9 +13,7 @@ Create, edit and save holograms from a EGPv3.
   * Save to code;
   * Autosaving;
   * Customize the menus;
-  
-## WIP:
-  * Share your hologram creations with everyone!
+  * Share your creations with everyone (Definitely wont go wrong in any way.)!
 
 ### Upload your saves!
  Run the __HoloEditorRevisedPublishSave.exe__ in the folder, press browse and select your save and hit upload!
