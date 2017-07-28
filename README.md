@@ -3,6 +3,8 @@ A complete remake of my Holo Editor in E2.
 
 Create, edit and save holograms from a EGPv3. 
 
+If you find any bugs/glitches report them in the Issues tab.
+
 ## Features:
   * Create, Edit and delete multiple holograms;
   * Copy and Paste holograms;
