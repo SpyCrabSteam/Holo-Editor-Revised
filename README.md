@@ -18,7 +18,7 @@ If you find any bugs/glitches report them in the Issues tab.
   * Share your creations with everyone (Definitely wont go wrong in any way.)!
 
 ### Upload your saves!
- Run the __HoloEditorRevisedPublishSave.exe__ in the folder, press browse and select your save and hit upload!
+ Run the __HoloEditorRevisedPublishSave.exe__ in the folder, press browse, select your save and hit upload!
 
 ### Using
  To use the E2, just drop the folder into ..\steamapps\common\GarrysMod\garrysmod\data\expression2
